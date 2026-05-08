@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { type User } from "./user.model.ts";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { AppError } from "../../shared/errors/AppError.ts";
 const DB_PATH = path.resolve("users.json");
 
 const readDB = async (): Promise<User[]> => {
@@ -23,7 +24,7 @@ export const createUser = async (name: string, plainPin: string) => {
 
   // Check if user exists
   if (users.find((u) => u.name === name)) {
-    throw new Error("User already exists");
+    throw new AppError(401, "User already exists");
   }
 
   const newUser: User = {
@@ -44,10 +45,12 @@ export const getUser = async (id: string, plainPin: string) => {
   // Check if user exists
   const foundUser = users.find((u) => u.id === id);
   if (!foundUser) {
-    throw new Error("User not found");
+    throw new AppError(400, "User not found");
   }
 
   const isValid = await bcrypt.compare(plainPin, foundUser.pinHash);
 
-  return { success: isValid, user: isValid ? foundUser : null };
+  if (!isValid) throw new AppError(401, "Incorrect pin");
+
+  return foundUser;
 };

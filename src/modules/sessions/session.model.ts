@@ -9,3 +9,12 @@ export class Session {
     this.hostPlayer = hostPlayer;
   }
 }
+
+export interface SessionParticipant {
+  id: string;
+  sessionId: string;
+  userId: string;
+  joinedAt: number;
+  score: number; // You can store game-specific user data here!
+  isHost: boolean;
+}

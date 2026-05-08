@@ -1,5 +1,6 @@
 import { type Request, type Response, Router } from "express";
 import * as UserService from "./user.service.ts";
+import { AppError } from "../../shared/errors/AppError.ts";
 
 const router = Router();
 
@@ -7,7 +8,7 @@ const createUser = async (req: Request, res: Response) => {
   const { name, plainPin } = req.body;
 
   if (!name || !plainPin) {
-    return res.status(400).json({ error: "Missing fields" });
+    throw new AppError(400, "Missing fields");
   }
 
   const user = await UserService.createUser(name, plainPin);
@@ -19,11 +20,11 @@ const getUser = async (req: Request, res: Response) => {
   const { plainPin } = req.body;
 
   if (typeof userId !== "string") {
-    return res.status(400).json({ error: "Invalid or missing ID" });
+    throw new AppError(400, "Invalid or missing ID");
   }
 
   if (!plainPin || typeof plainPin !== "string") {
-    return res.status(400).json({ error: "Pin is required" });
+    throw new AppError(400, "Pin is required");
   }
 
   const user = await UserService.getUser(userId, plainPin);
