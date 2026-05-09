@@ -83,34 +83,61 @@ export const createCardCategory = async (name: string, iconUrl: string) => {
   return newCardCategory;
 };
 
-export const addCardToCardCategory = async (
+export const addCardToCardCategories = async (
   cardId: string,
-  cardCategoryId: string,
+  cardCategoryIds: Array<string>,
 ) => {
-  const id = uuidv4();
-
   const cards = await readCardDB();
   const cardCategories = await readCardCategoryDB();
+  const cardCardCategories = await readCardCardCategoryDB();
 
   const card = cards.find((u) => u.id === cardId);
   if (!card) throw new AppError(400, "Invalid or missing ID");
 
-  const cardCategory = cardCategories.find((u) => u.id === cardCategoryId);
-  if (!cardCategory) throw new AppError(400, "Invalid or missing ID");
+  for (var i = 0; i < cardCategoryIds.length; i++) {
+    const cardCategory = cardCategories.find(
+      (g) => g.id === cardCategories[i]?.id,
+    );
+    if (!cardCategory) {
+      throw new AppError(400, "Card Category not found");
+    }
+  }
 
-  const newCardCardCategory: CardCardCategory = {
-    id,
-    cardId,
-    cardCategoryId,
-    createdAt: Date.now(),
-  };
+  const existingCardCategoriesNames = [];
+  for (const cardCategoryId of cardCategoryIds) {
+    const isDuplicate = cardCardCategories.find(
+      (c) => c.cardCategoryId === cardCategoryId && c.cardId === cardId,
+    );
 
-  const cardCardCategories = await readCardCardCategoryDB();
+    if (isDuplicate) {
+      const categoryData = cardCategories.find((c) => c.id === cardCategoryId);
+      existingCardCategoriesNames.push(categoryData?.name || cardCategoryId);
+    }
+  }
 
-  cardCardCategories.push(newCardCardCategory);
+  if (existingCardCategoriesNames.length > 0) {
+    const categoryListString = existingCardCategoriesNames.join(", ");
+    throw new AppError(
+      400,
+      `This card is already part of the categories: ${categoryListString}`,
+    );
+  }
+
+  const newCardCardCategories = cardCategoryIds.map((cardCategoryId) => {
+    const id = uuidv4();
+    const newCardCardCategory: CardCardCategory = {
+      id,
+      cardId,
+      cardCategoryId,
+      createdAt: Date.now(),
+    };
+    cardCardCategories.push(newCardCardCategory);
+    return newCardCardCategory;
+  });
+
   writeCardCardCategoryDB(cardCardCategories);
 
-  return newCardCardCategory;
+  return newCardCardCategories;
 };
 
 export const getCard = async (id: string) => {

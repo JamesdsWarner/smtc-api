@@ -69,20 +69,23 @@ const getCardCategory = async (req: Request, res: Response) => {
   res.status(200).json(cardCategory);
 };
 
-const addCardToCardCategory = async (req: Request, res: Response) => {
-  const { cardId, cardCategoryId } = req.body;
+const addCardToCardCategories = async (req: Request, res: Response) => {
+  const { cardId, cardCategoryIds } = req.body;
 
   if (typeof cardId !== "string") {
     throw new AppError(400, "Invalid or missing ID");
   }
 
-  if (typeof cardCategoryId !== "string") {
-    throw new AppError(400, "Invalid or missing ID");
+  if (
+    !Array.isArray(cardCategoryIds) ||
+    !cardCategoryIds.every((id) => typeof id === "string")
+  ) {
+    throw new AppError(400, "cardCategoryIds must be an array of strings");
   }
 
-  const cardCardCategory = await CardService.addCardToCardCategory(
+  const cardCardCategory = await CardService.addCardToCardCategories(
     cardId,
-    cardCategoryId,
+    cardCategoryIds,
   );
   res.status(200).json(cardCardCategory);
 };
@@ -91,6 +94,6 @@ router.post("/create", createCard);
 router.get("/:cardId", getCard);
 router.post("/categories/create", createCardCategory);
 router.get("/categories/:cardCategoryId", getCardCategory);
-router.post("/add-to-category", addCardToCardCategory);
+router.post("/add-to-category", addCardToCardCategories);
 
 export default router;

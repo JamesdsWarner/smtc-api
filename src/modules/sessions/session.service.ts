@@ -75,6 +75,7 @@ export const addUserToSession = async (
   isHost = false,
 ) => {
   const users = await readUserDB();
+  const sessions = await readSessionDB();
   const sessionParticipants = await readSessionParticipantsDB();
 
   logger.info(sessionId, userId);
@@ -82,10 +83,21 @@ export const addUserToSession = async (
   // Check if session exists
   // getSession(sessionId);
   const user = users.find((u) => u.id === userId);
-
   if (!user) {
     throw new AppError(400, "User not found");
   }
+
+  const session = sessions.find((s) => s.id === sessionId);
+  if (!session) {
+    throw new AppError(400, "Session not found");
+  }
+
+  const sessionParticipantDuplicate = sessionParticipants.find(
+    (sp) => sp.sessionId === sessionId && sp.userId === userId,
+  );
+
+  if (sessionParticipantDuplicate)
+    throw new AppError(400, `This user is already part of this session}`);
 
   const id = uuidv4();
 
