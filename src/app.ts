@@ -3,6 +3,7 @@ const app = express();
 const port = 3000;
 import userRouter from "./modules/users/user.controller.ts";
 import sessionRouter from "./modules/sessions/session.controller.ts";
+import cardRouter from "./modules/cards/cards.controller.ts";
 import { errorHandler } from "./shared/middleware/errorHandler.ts";
 import winston from "winston";
 import expressWinston from "express-winston";
@@ -32,6 +33,7 @@ app.use(
 
 app.use("/api/users", userRouter);
 app.use("/api/sessions", sessionRouter);
+app.use("/api/cards", cardRouter);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

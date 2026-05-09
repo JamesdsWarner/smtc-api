@@ -22,11 +22,6 @@ export const createUser = async (name: string, plainPin: string) => {
 
   const users = await readDB();
 
-  // Check if user exists
-  if (users.find((u) => u.name === name)) {
-    throw new AppError(401, "User already exists");
-  }
-
   const newUser: User = {
     id,
     name,
