@@ -1,22 +1,14 @@
-import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import { type GameMode, type GameModeCard } from "./gameMode.model.ts";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { User } from "../users/user.model.ts";
 import { AppError } from "../../shared/errors/AppError.ts";
-import { logger } from "../../shared/utils/logger.ts";
+import { getCard } from "../cards/card.service.ts";
 const GAME_MODES_DB_PATH = path.resolve("gameModes.json");
-const CARDS_DB_PATH = path.resolve("cards.json");
 const GAME_MODE_CARDS_DB_PATH = path.resolve("GameModeCards.json");
 
 const readGameModesDB = async (): Promise<GameMode[]> => {
   const data = await fs.readFile(GAME_MODES_DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
-
-const readCardsDB = async (): Promise<User[]> => {
-  const data = await fs.readFile(CARDS_DB_PATH, "utf-8");
   return JSON.parse(data);
 };
 
@@ -79,14 +71,10 @@ export const addCardToGameModes = async (
   gameModeIds: Array<string>,
   cardId: string,
 ) => {
-  const cards = await readCardsDB();
   const gameModeCards = await readGameModeCardsDB();
   const gameModes = await readGameModesDB();
 
-  const card = cards.find((c) => c.id === cardId);
-  if (!card) {
-    throw new AppError(400, "Card not found");
-  }
+  if (!getCard(cardId)) throw new AppError(400, "Card not found");
 
   for (var i = 0; i < gameModeIds.length; i++) {
     const gameMode = gameModes.find((g) => g.id === gameModes[i]?.id);

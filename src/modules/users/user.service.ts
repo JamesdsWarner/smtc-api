@@ -34,7 +34,7 @@ export const createUser = async (name: string, plainPin: string) => {
   return newUser;
 };
 
-export const getUser = async (id: string, plainPin: string) => {
+export const getUser = async (id: string, plainPin?: string) => {
   const users = await readDB();
 
   // Check if user exists
@@ -43,9 +43,9 @@ export const getUser = async (id: string, plainPin: string) => {
     throw new AppError(400, "User not found");
   }
 
-  const isValid = await bcrypt.compare(plainPin, foundUser.pinHash);
+  // const isValid = await bcrypt.compare(plainPin, foundUser.pinHash);
 
-  if (!isValid) throw new AppError(401, "Incorrect pin");
+  // if (!isValid) throw new AppError(401, "Incorrect pin");
 
   return foundUser;
 };

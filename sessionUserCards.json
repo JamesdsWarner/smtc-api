@@ -1,0 +1,34 @@
+[
+  {
+    "id": "3c00b4b6-9e23-4134-9a0a-47a90525ac28",
+    "cardId": "d1521e39-6974-4baa-8efa-b5cabec2cad2",
+    "sessionId": "a987f40c-f6a9-49cc-84cc-c6e27163a9db",
+    "userId": "fbe44078-93eb-4f3e-8345-f0de506d007b",
+    "status": "active",
+    "createdAt": 1778337051918
+  },
+  {
+    "id": "ede51f54-82ae-4db7-a03e-44b8e5e09be5",
+    "cardId": "37acff80-183d-4fe0-a241-b370f363610c",
+    "sessionId": "a987f40c-f6a9-49cc-84cc-c6e27163a9db",
+    "userId": "fbe44078-93eb-4f3e-8345-f0de506d007b",
+    "status": "active",
+    "createdAt": 1778337137981
+  },
+  {
+    "id": "3c9ce01e-5ddd-413c-a244-b356ff16fb0b",
+    "cardId": "ba66b9ec-1a9a-4976-971f-fc936e93d5b2",
+    "sessionId": "a987f40c-f6a9-49cc-84cc-c6e27163a9db",
+    "userId": "fbe44078-93eb-4f3e-8345-f0de506d007b",
+    "status": "active",
+    "createdAt": 1778337148710
+  },
+  {
+    "id": "172014ff-dfd5-4f1b-b5ca-b0cadd4f4de5",
+    "cardId": "d562e3f2-b992-48fe-bfae-19dddb4e61e2",
+    "sessionId": "a987f40c-f6a9-49cc-84cc-c6e27163a9db",
+    "userId": "fbe44078-93eb-4f3e-8345-f0de506d007b",
+    "status": "active",
+    "createdAt": 1778337153051
+  }
+]

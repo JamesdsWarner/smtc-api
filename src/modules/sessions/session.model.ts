@@ -18,3 +18,12 @@ export interface SessionParticipant {
   score: number; // You can store game-specific user data here!
   isHost: boolean;
 }
+
+export interface SessionUserCard {
+  id: string;
+  cardId: string;
+  sessionId: string;
+  userId: string;
+  status: "active" | "discarded" | "success" | "failed";
+  createdAt: number;
+}

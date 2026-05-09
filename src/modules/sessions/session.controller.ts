@@ -67,8 +67,33 @@ const addUserToSession = async (req: Request, res: Response) => {
   res.status(200).json(user);
 };
 
+export const createSessionUserCards = async (req: Request, res: Response) => {
+  const { amountOfCards = 1 } = req.body;
+  const { userId, sessionId } = req.params;
+
+  if (typeof userId !== "string") {
+    throw new AppError(400, "Invalid or missing ID");
+  }
+
+  if (typeof sessionId !== "string") {
+    throw new AppError(400, "Invalid or missing ID");
+  }
+
+  if (typeof amountOfCards !== "number") {
+    throw new AppError(400, "Invalid amount of cards");
+  }
+
+  const sessionUserCards = await SessionService.assignCardToPlayerInSession(
+    userId,
+    sessionId,
+    amountOfCards,
+  );
+  res.status(200).json(sessionUserCards);
+};
+
 router.post("/create", createSession);
 router.get("/:sessionId", getSession);
 router.post("/add-user", addUserToSession);
+router.post("/:sessionId/players/:userId/cards", createSessionUserCards);
 
 export default router;

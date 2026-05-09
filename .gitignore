@@ -1,4 +1,5 @@
 node_modules
+logs
 users.json
 sessions.json
 cardCardCategories.json
@@ -7,3 +8,4 @@ cards.json
 sessionParticipants.json
 gameModeCards.json
 gameModes.json
+sessionUserCards.json
