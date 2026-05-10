@@ -1,5 +1,6 @@
 node_modules
 logs
+.env
 users.json
 sessions.json
 card_card_categories.json
@@ -10,5 +11,4 @@ game_mode_cards.json
 game_modes.json
 session_user_cards.json
 icons.json
-session_cards.json
 session_game_modes.json

@@ -13,15 +13,18 @@
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "winston": "^3.0.0",
     "express-winston": "^4.2.0",
-    "uuid": "^14.0.0"
+    "pg": "^8.20.0",
+    "uuid": "^14.0.0",
+    "winston": "^3.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
     "nodemon": "^3.1.14",
     "typescript": "^6.0.3"
   }

@@ -5,6 +5,8 @@ import type { CardCardCategory, CardCategory, Card } from "./card.model.ts";
 import { readDB, writeDB } from "../../shared/helpers/dbHelper.ts";
 import { getGameMode } from "../gameModes/gameMode.service.ts";
 import type { Icon } from "../../types/icons.ts";
+import pool from "../../shared/db/index.ts";
+import { handleDbError } from "../../shared/utils/dbErrorHandler.ts";
 const CARDS_DB_PATH = path.resolve("cards.json");
 const CARD_CATEGORIES_DB_PATH = path.resolve("card_categories.json");
 const CARD_CARD_CATEOGORIES_DB_PATH = path.resolve("card_card_categories.json");
@@ -32,36 +34,27 @@ export const createCard = async (
   gameModeId: string,
   iconId: string,
 ) => {
-  const id = uuidv4();
+  try {
+    const gameMode = await getGameMode(gameModeId);
+    if (!gameMode) throw new AppError(400, "Game Mode does not exist");
 
-  const cards = await readCardsDB();
+    const icons = await readDB<Icon[]>(ICONS_PATH);
 
-  // Check if card exists
-  if (cards.find((u) => u.prompt === prompt)) {
-    throw new AppError(401, "Card already exists");
+    if (!icons.find((u) => u.id === iconId)) {
+      throw new AppError(400, "Icon does not exist");
+    }
+
+    const res = await pool.query(
+      `INSERT INTO cards (prompt, icon_id, game_mode_id) VALUES ($1, $2, $3) RETURNING *`,
+      [prompt, iconId, gameModeId],
+    );
+
+    return res.rows[0];
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+
+    handleDbError(err, "Card prompt");
   }
-
-  if (!getGameMode(gameModeId))
-    throw new AppError(400, "Game Mode does not exist");
-
-  const icons = await readDB<Icon[]>(ICONS_PATH);
-
-  if (!icons.find((u) => u.id === iconId)) {
-    throw new AppError(400, "Icon does not exist");
-  }
-
-  const newCard: Card = {
-    id,
-    prompt,
-    iconId,
-    gameModeId,
-    createdAt: Date.now(),
-  };
-
-  cards.push(newCard);
-  await writeCardsDB(cards);
-
-  return newCard;
 };
 
 export const createCardCategory = async (name: string, iconId: string) => {

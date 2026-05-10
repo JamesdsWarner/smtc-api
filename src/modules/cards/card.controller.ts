@@ -21,12 +21,6 @@ const createCard = async (req: Request, res: Response) => {
   }
 
   const card = await CardService.createCard(prompt, gameModeId, iconId);
-  const cardId = card.id;
-
-  if (!cardId) {
-    throw new AppError(400, "Error creating card");
-  }
-
   res.status(201).json(card);
 };
 
