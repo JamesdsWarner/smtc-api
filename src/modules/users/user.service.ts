@@ -4,23 +4,19 @@ import { type User } from "./user.model.ts";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { AppError } from "../../shared/errors/AppError.ts";
-const DB_PATH = path.resolve("users.json");
+import { readDB, writeDB } from "../../shared/helpers/dbHelper.ts";
+const USER_DB_PATH = path.resolve("users.json");
 
-const readDB = async (): Promise<User[]> => {
-  const data = await fs.readFile(DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
-
-const writeDB = async (users: User[]) => {
-  await fs.writeFile(DB_PATH, JSON.stringify(users, null, 2));
-};
+export const readUsersDB = async () => await readDB<User[]>(USER_DB_PATH);
+export const writeUsersDB = async (users: User[]) =>
+  await writeDB<User[]>(USER_DB_PATH, users);
 
 export const createUser = async (name: string, plainPin: string) => {
   const saltRounds = 10;
   const pinHash = await bcrypt.hash(plainPin, saltRounds);
   const id = uuidv4();
 
-  const users = await readDB();
+  const users = await readUsersDB();
 
   const newUser: User = {
     id,
@@ -29,13 +25,13 @@ export const createUser = async (name: string, plainPin: string) => {
   };
 
   users.push(newUser);
-  await writeDB(users);
+  await writeUsersDB(users);
 
   return newUser;
 };
 
 export const getUser = async (id: string, plainPin?: string) => {
-  const users = await readDB();
+  const users = await readUsersDB();
 
   // Check if user exists
   const foundUser = users.find((u) => u.id === id);

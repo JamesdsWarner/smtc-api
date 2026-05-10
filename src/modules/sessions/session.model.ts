@@ -10,7 +10,7 @@ export class Session {
   }
 }
 
-export interface SessionParticipant {
+export interface SessionUser {
   id: string;
   sessionId: string;
   userId: string;
@@ -19,11 +19,19 @@ export interface SessionParticipant {
   isHost: boolean;
 }
 
+export interface SessionCard {
+  id: string;
+  cardId: string;
+  sessionId: string;
+  status: "active" | "discarded" | "success" | "failed" | "notPlayed";
+  createdAt: number;
+}
+
 export interface SessionUserCard {
   id: string;
   cardId: string;
   sessionId: string;
   userId: string;
-  status: "active" | "discarded" | "success" | "failed";
+  status: "active" | "discarded" | "success" | "failed" | "notPlayed";
   createdAt: number;
 }

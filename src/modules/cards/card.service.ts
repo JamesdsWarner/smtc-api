@@ -1,84 +1,94 @@
 import { v4 as uuidv4 } from "uuid";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { AppError } from "../../shared/errors/AppError.ts";
 import type { CardCardCategory, CardCategory, Card } from "./card.model.ts";
+import { readDB, writeDB } from "../../shared/helpers/dbHelper.ts";
+import { getGameMode } from "../gameModes/gameMode.service.ts";
+import type { Icon } from "../../types/icons.ts";
 const CARDS_DB_PATH = path.resolve("cards.json");
-const CARD_CATEGORIES_DB_PATH = path.resolve("cardCategories.json");
-const CARD_CARD_CATEOGORIES_DB_PATH = path.resolve("cardCardCategories.json");
+const CARD_CATEGORIES_DB_PATH = path.resolve("card_categories.json");
+const CARD_CARD_CATEOGORIES_DB_PATH = path.resolve("card_card_categories.json");
+const ICONS_PATH = path.resolve("icons.json");
 
-const readCardDB = async (): Promise<Card[]> => {
-  const data = await fs.readFile(CARDS_DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
-
-const readCardCategoryDB = async (): Promise<CardCategory[]> => {
-  const data = await fs.readFile(CARD_CATEGORIES_DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
-
-const readCardCardCategoryDB = async (): Promise<CardCardCategory[]> => {
-  const data = await fs.readFile(CARD_CARD_CATEOGORIES_DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
-
-const writeCardDB = async (cards: Card[]) => {
-  await fs.writeFile(CARDS_DB_PATH, JSON.stringify(cards, null, 2));
-};
-
-const writeCardCategoryDB = async (cards: CardCategory[]) => {
-  await fs.writeFile(CARD_CATEGORIES_DB_PATH, JSON.stringify(cards, null, 2));
-};
-
-const writeCardCardCategoryDB = async (cards: CardCardCategory[]) => {
-  await fs.writeFile(
+export const readCardsDB = async () => await readDB<Card[]>(CARDS_DB_PATH);
+export const readCardCategoriesDB = async () =>
+  await readDB<CardCategory[]>(CARD_CATEGORIES_DB_PATH);
+export const readCardCardCategoriesDB = async () =>
+  await readDB<CardCardCategory[]>(CARD_CARD_CATEOGORIES_DB_PATH);
+export const writeCardsDB = async (cards: Card[]) =>
+  await writeDB<Card[]>(CARDS_DB_PATH, cards);
+export const writeCardCategoriesDB = async (cardCategories: CardCategory[]) =>
+  await writeDB<CardCategory[]>(CARD_CATEGORIES_DB_PATH, cardCategories);
+export const writeCardCardCategoriesDB = async (
+  cardCardCategories: CardCardCategory[],
+) =>
+  await writeDB<CardCardCategory[]>(
     CARD_CARD_CATEOGORIES_DB_PATH,
-    JSON.stringify(cards, null, 2),
+    cardCardCategories,
   );
-};
 
-export const createCard = async (prompt: string, iconUrl: string) => {
+export const createCard = async (
+  prompt: string,
+  gameModeId: string,
+  iconId: string,
+) => {
   const id = uuidv4();
 
-  const cards = await readCardDB();
+  const cards = await readCardsDB();
 
   // Check if card exists
   if (cards.find((u) => u.prompt === prompt)) {
     throw new AppError(401, "Card already exists");
   }
 
+  if (!getGameMode(gameModeId))
+    throw new AppError(400, "Game Mode does not exist");
+
+  const icons = await readDB<Icon[]>(ICONS_PATH);
+
+  if (!icons.find((u) => u.id === iconId)) {
+    throw new AppError(400, "Icon does not exist");
+  }
+
   const newCard: Card = {
     id,
     prompt,
-    iconUrl,
+    iconId,
+    gameModeId,
     createdAt: Date.now(),
   };
 
   cards.push(newCard);
-  await writeCardDB(cards);
+  await writeCardsDB(cards);
 
   return newCard;
 };
 
-export const createCardCategory = async (name: string, iconUrl: string) => {
+export const createCardCategory = async (name: string, iconId: string) => {
   const id = uuidv4();
 
-  const cardCategories = await readCardCategoryDB();
+  const cardCategories = await readCardCategoriesDB();
 
   // Check if card exists
   if (cardCategories.find((u) => u.name === name)) {
     throw new AppError(401, "Card Category already exists");
   }
 
+  const icons = await readDB<Icon[]>(ICONS_PATH);
+
+  if (!icons.find((i) => i.id === iconId)) {
+    throw new AppError(400, "Icon does not exist");
+  }
+
   const newCardCategory: CardCategory = {
     id,
     name,
-    iconUrl,
+    iconId,
     createdAt: Date.now(),
   };
 
   cardCategories.push(newCardCategory);
-  await writeCardCategoryDB(cardCategories);
+  await writeCardCategoriesDB(cardCategories);
 
   return newCardCategory;
 };
@@ -87,9 +97,9 @@ export const addCardToCardCategories = async (
   cardId: string,
   cardCategoryIds: Array<string>,
 ) => {
-  const cards = await readCardDB();
-  const cardCategories = await readCardCategoryDB();
-  const cardCardCategories = await readCardCardCategoryDB();
+  const cards = await readCardsDB();
+  const cardCategories = await readCardCategoriesDB();
+  const cardCardCategories = await readCardCardCategoriesDB();
 
   const card = cards.find((u) => u.id === cardId);
   if (!card) throw new AppError(400, "Invalid or missing ID");
@@ -135,13 +145,13 @@ export const addCardToCardCategories = async (
     return newCardCardCategory;
   });
 
-  writeCardCardCategoryDB(cardCardCategories);
+  writeCardCardCategoriesDB(cardCardCategories);
 
   return newCardCardCategories;
 };
 
 export const getCard = async (id: string) => {
-  const cards = await readCardDB();
+  const cards = await readCardsDB();
 
   // Check if card exists
   const foundCard = cards.find((u) => u.id === id);
@@ -152,7 +162,7 @@ export const getCard = async (id: string) => {
 };
 
 export const getCardCategory = async (id: string) => {
-  const cardCategories = await readCardCategoryDB();
+  const cardCategories = await readCardCategoriesDB();
 
   // Check if cardCategory exists
   const foundCardCategory = cardCategories.find((u) => u.id === id);

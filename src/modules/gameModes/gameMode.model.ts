@@ -2,7 +2,7 @@ export interface GameMode {
   id: string;
   name: string;
   description: string;
-  iconUrl: string;
+  iconId: string;
   createdAt: number;
 }
 

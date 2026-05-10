@@ -6,17 +6,21 @@ import { logger } from "../../shared/utils/logger.ts";
 const router = Router();
 
 const createCard = async (req: Request, res: Response) => {
-  const { prompt, iconUrl } = req.body;
+  const { prompt, gameModeId, iconId } = req.body;
 
   if (!prompt) {
     throw new AppError(400, "Missing prompt field");
   }
 
-  if (!iconUrl) {
-    throw new AppError(400, "Missing iconUrl field");
+  if (!gameModeId) {
+    throw new AppError(400, "Missing gameModeId field");
   }
 
-  const card = await CardService.createCard(prompt, iconUrl);
+  if (!iconId) {
+    throw new AppError(400, "Missing iconId field");
+  }
+
+  const card = await CardService.createCard(prompt, gameModeId, iconId);
   const cardId = card.id;
 
   if (!cardId) {
@@ -27,17 +31,17 @@ const createCard = async (req: Request, res: Response) => {
 };
 
 const createCardCategory = async (req: Request, res: Response) => {
-  const { name, iconUrl } = req.body;
+  const { name, iconId } = req.body;
 
   if (!name) {
     throw new AppError(400, "Missing name field");
   }
 
-  if (!iconUrl) {
-    throw new AppError(400, "Missing iconUrl field");
+  if (!iconId) {
+    throw new AppError(400, "Missing iconId field");
   }
 
-  const cardCategory = await CardService.createCardCategory(name, iconUrl);
+  const cardCategory = await CardService.createCardCategory(name, iconId);
   const cardCategoryId = cardCategory.id;
 
   if (!cardCategoryId) {

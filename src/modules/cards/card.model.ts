@@ -1,14 +1,15 @@
 export interface Card {
   id: string;
   prompt: string;
-  iconUrl: string;
+  iconId: string;
+  gameModeId: string;
   createdAt: number;
 }
 
 export interface CardCategory {
   id: string;
   name: string;
-  iconUrl: string;
+  iconId: string;
   createdAt: number;
 }
 

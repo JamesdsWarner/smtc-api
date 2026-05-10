@@ -1,70 +1,45 @@
-import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import {
   type Session,
-  type SessionParticipant,
+  type SessionUser,
   type SessionUserCard,
 } from "./session.model.ts";
-import fs from "node:fs/promises";
 import path from "node:path";
-import type { User } from "../users/user.model.ts";
 import { AppError } from "../../shared/errors/AppError.ts";
 import { logger } from "../../shared/utils/logger.ts";
-import { getUser } from "../users/user.service.ts";
-import type { Card } from "../cards/card.model.ts";
+import { getUser, readUsersDB } from "../users/user.service.ts";
+import { readDB, writeDB } from "../../shared/helpers/dbHelper.ts";
+import { readCardsDB } from "../cards/card.service.ts";
 const SESSIONS_DB_PATH = path.resolve("sessions.json");
-const USERS_DB_PATH = path.resolve("users.json");
-const SESSION_PARTICIPANTS_DB_PATH = path.resolve("sessionParticipants.json");
-const SESSION_USER_CARDS_DB_OATH = path.resolve("sessionUserCards.json");
-const CARDS_DB_PATH = path.resolve("cards.json");
+const SESSION_USERS_DB_PATH = path.resolve("session_users.json");
+const SESSION_USER_CARDS_DB_OATH = path.resolve("session_user_cards.json");
 
-const readCardDB = async (): Promise<Card[]> => {
-  const data = await fs.readFile(CARDS_DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
+export const readSessionDB = async () =>
+  await readDB<Session[]>(SESSIONS_DB_PATH);
+export const readSessionUsersDB = async () =>
+  await readDB<SessionUser[]>(SESSION_USERS_DB_PATH);
+export const readSessionUserCardDB = async () =>
+  await readDB<SessionUserCard[]>(SESSION_USER_CARDS_DB_OATH);
 
-const readSessionDB = async (): Promise<Session[]> => {
-  const data = await fs.readFile(SESSIONS_DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
-
-const readUserDB = async (): Promise<User[]> => {
-  const data = await fs.readFile(USERS_DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
-
-const readSessionParticipantsDB = async (): Promise<SessionParticipant[]> => {
-  const data = await fs.readFile(SESSION_PARTICIPANTS_DB_PATH, "utf-8");
-  return JSON.parse(data);
-};
-
-const writeSessionDB = async (sessions: Session[]) => {
-  await fs.writeFile(SESSIONS_DB_PATH, JSON.stringify(sessions, null, 2));
-};
-
-const writeSessionParticipantDB = async (sessions: SessionParticipant[]) => {
-  await fs.writeFile(
-    SESSION_PARTICIPANTS_DB_PATH,
-    JSON.stringify(sessions, null, 2),
-  );
-};
-
-const readSessionUserCardDB = async (): Promise<SessionUserCard[]> => {
-  const data = await fs.readFile(SESSION_USER_CARDS_DB_OATH, "utf-8");
-  return JSON.parse(data);
-};
-const writeSessionUserCardDB = async (cards: SessionUserCard[]) => {
-  await fs.writeFile(
+export const writeSessionDB = async (sessions: Session[]) =>
+  await writeDB<Session[]>(SESSIONS_DB_PATH, sessions);
+export const writeSessionUserDB = async (SessionUsers: SessionUser[]) =>
+  await writeDB<SessionUser[]>(SESSION_USERS_DB_PATH, SessionUsers);
+export const writeSessionUserCardDB = async (
+  sessionUserCards: SessionUserCard[],
+) =>
+  await writeDB<SessionUserCard[]>(
     SESSION_USER_CARDS_DB_OATH,
-    JSON.stringify(cards, null, 2),
+    sessionUserCards,
   );
-};
 
 export const createSession = async (name: string, hostPlayer: string) => {
   const id = uuidv4();
 
   const sessions = await readSessionDB();
-  const users = await readUserDB();
+
+  // @Todo add get all users endpoint
+  const users = await readUsersDB();
 
   const user = users.find((u) => u.id === hostPlayer);
 
@@ -98,9 +73,9 @@ export const addUserToSession = async (
   userId: string,
   isHost = false,
 ) => {
-  const users = await readUserDB();
+  const users = await readUsersDB();
   const sessions = await readSessionDB();
-  const sessionParticipants = await readSessionParticipantsDB();
+  const SessionUsers = await readSessionUsersDB();
 
   logger.info(sessionId, userId);
 
@@ -116,16 +91,16 @@ export const addUserToSession = async (
     throw new AppError(400, "Session not found");
   }
 
-  const sessionParticipantDuplicate = sessionParticipants.find(
+  const SessionUserDuplicate = SessionUsers.find(
     (sp) => sp.sessionId === sessionId && sp.userId === userId,
   );
 
-  if (sessionParticipantDuplicate)
+  if (SessionUserDuplicate)
     throw new AppError(400, `This user is already part of this session}`);
 
   const id = uuidv4();
 
-  const newSessionParticipant: SessionParticipant = {
+  const newSessionUser: SessionUser = {
     id,
     sessionId,
     userId,
@@ -134,10 +109,10 @@ export const addUserToSession = async (
     isHost,
   };
 
-  sessionParticipants.push(newSessionParticipant);
-  await writeSessionParticipantDB(sessionParticipants);
+  SessionUsers.push(newSessionUser);
+  await writeSessionUserDB(SessionUsers);
 
-  return newSessionParticipant;
+  return newSessionUser;
 };
 
 export const assignCardToPlayerInSession = async (
@@ -155,7 +130,7 @@ export const assignCardToPlayerInSession = async (
 
   // 2. Logic to write to your session_player_cards.json
   // @to-do add get cards route in cards module.
-  const cards = await readCardDB();
+  const cards = await readCardsDB();
   const sessionUserCards = await readSessionUserCardDB();
   const unusedCards = cards.filter(
     (card) =>
