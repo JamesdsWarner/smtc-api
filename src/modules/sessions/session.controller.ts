@@ -50,10 +50,7 @@ const getSession = async (req: Request, res: Response) => {
 };
 
 const addUserToSession = async (req: Request, res: Response) => {
-  const { sessionId, userId } = req.body;
-
-  logger.info(req.params.userId);
-  logger.info(req.params.sessionId);
+  const { sessionId, userId } = req.params;
 
   if (typeof sessionId !== "string") {
     throw new AppError(400, "Invalid or missing ID");
@@ -65,6 +62,32 @@ const addUserToSession = async (req: Request, res: Response) => {
 
   const user = await SessionService.addUserToSession(sessionId, userId);
   res.status(200).json(user);
+};
+
+const addGameModesToSession = async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  const { gameModeIds } = req.body;
+
+  if (typeof sessionId !== "string") {
+    throw new AppError(400, "Invalid or missing ID");
+  }
+
+  if (
+    !Array.isArray(gameModeIds) ||
+    !gameModeIds.every((id) => typeof id === "string")
+  ) {
+    throw new AppError(400, "gameModeIds must be an array of strings");
+  }
+
+  const sessionGameModes = await SessionService.addGameModesToSession(
+    sessionId,
+    gameModeIds,
+  );
+  res.status(200).json(sessionGameModes);
+};
+
+const addCardsToSession = async (req: Request, res: Response) => {
+  const { cards } = req.body;
 };
 
 export const createSessionUserCards = async (req: Request, res: Response) => {
@@ -93,7 +116,9 @@ export const createSessionUserCards = async (req: Request, res: Response) => {
 
 router.post("/create", createSession);
 router.get("/:sessionId", getSession);
-router.post("/add-user", addUserToSession);
+router.post("/:sessionId/players/:userId", addUserToSession);
+router.post("/:sessionId/add-game-modes", addGameModesToSession);
+router.post("/:sessionId/add-cards", addCardsToSession);
 router.post("/:sessionId/players/:userId/cards", createSessionUserCards);
 
 export default router;

@@ -35,3 +35,10 @@ export interface SessionUserCard {
   status: "active" | "discarded" | "success" | "failed" | "notPlayed";
   createdAt: number;
 }
+
+export interface SessionGameMode {
+  id: string;
+  sessionId: string;
+  gameModeId: string;
+  createdAt: number;
+}

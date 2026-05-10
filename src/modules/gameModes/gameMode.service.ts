@@ -73,7 +73,7 @@ export const getGameMode = async (id: string) => {
 //   if (!getCard(cardId)) throw new AppError(400, "Card not found");
 
 //   for (var i = 0; i < gameModeIds.length; i++) {
-//     const gameMode = gameModes.find((g) => g.id === gameModes[i]?.id);
+//     const gameMode = gameModes.find((g) => g.id === gameModeIds[i]);
 //     if (!gameMode) {
 //       throw new AppError(400, "Game mode not found");
 //     }

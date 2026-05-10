@@ -106,7 +106,7 @@ export const addCardToCardCategories = async (
 
   for (var i = 0; i < cardCategoryIds.length; i++) {
     const cardCategory = cardCategories.find(
-      (g) => g.id === cardCategories[i]?.id,
+      (g) => g.id === cardCategoryIds[i],
     );
     if (!cardCategory) {
       throw new AppError(400, "Card Category not found");

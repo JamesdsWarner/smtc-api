@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import {
   type Session,
+  type SessionGameMode,
   type SessionUser,
   type SessionUserCard,
 } from "./session.model.ts";
@@ -10,9 +11,11 @@ import { logger } from "../../shared/utils/logger.ts";
 import { getUser, readUsersDB } from "../users/user.service.ts";
 import { readDB, writeDB } from "../../shared/helpers/dbHelper.ts";
 import { readCardsDB } from "../cards/card.service.ts";
+import { readGameModesDB } from "../gameModes/gameMode.service.ts";
 const SESSIONS_DB_PATH = path.resolve("sessions.json");
 const SESSION_USERS_DB_PATH = path.resolve("session_users.json");
 const SESSION_USER_CARDS_DB_OATH = path.resolve("session_user_cards.json");
+const SESSION_GAME_MODES_DB_PATH = path.resolve("session_game_modes.json");
 
 export const readSessionDB = async () =>
   await readDB<Session[]>(SESSIONS_DB_PATH);
@@ -20,6 +23,8 @@ export const readSessionUsersDB = async () =>
   await readDB<SessionUser[]>(SESSION_USERS_DB_PATH);
 export const readSessionUserCardDB = async () =>
   await readDB<SessionUserCard[]>(SESSION_USER_CARDS_DB_OATH);
+export const readSessionGameModesDB = async () =>
+  await readDB<SessionGameMode[]>(SESSION_GAME_MODES_DB_PATH);
 
 export const writeSessionDB = async (sessions: Session[]) =>
   await writeDB<Session[]>(SESSIONS_DB_PATH, sessions);
@@ -31,6 +36,13 @@ export const writeSessionUserCardDB = async (
   await writeDB<SessionUserCard[]>(
     SESSION_USER_CARDS_DB_OATH,
     sessionUserCards,
+  );
+export const writeSessionGameModesDB = async (
+  sessionGameModes: SessionGameMode[],
+) =>
+  await writeDB<SessionGameMode[]>(
+    SESSION_GAME_MODES_DB_PATH,
+    sessionGameModes,
   );
 
 export const createSession = async (name: string, hostPlayer: string) => {
@@ -113,6 +125,60 @@ export const addUserToSession = async (
   await writeSessionUserDB(SessionUsers);
 
   return newSessionUser;
+};
+
+export const addGameModesToSession = async (
+  sessionId: string,
+  gameModeIds: string[],
+) => {
+  const gameModes = await readGameModesDB();
+  const sessionGameModes = await readSessionGameModesDB();
+
+  const session = getSession(sessionId);
+  if (!session) throw new AppError(400, "Invalid or missing ID");
+
+  for (var i = 0; i < gameModeIds.length; i++) {
+    const gameMode = gameModes.find((g) => g.id === gameModeIds[i]);
+    if (!gameMode) {
+      throw new AppError(400, "Game Mode not found");
+    }
+  }
+
+  const existingGameModesNames = [];
+  for (const gameModeId of gameModeIds) {
+    const isDuplicate = sessionGameModes.find(
+      (g) => g.gameModeId === gameModeId && g.sessionId === sessionId,
+    );
+
+    if (isDuplicate) {
+      const gameModeData = gameModes.find((g) => g.id === gameModeId);
+      existingGameModesNames.push(gameModeData?.id);
+    }
+  }
+
+  if (existingGameModesNames.length > 0) {
+    const gameModesListString = existingGameModesNames.join(", ");
+    throw new AppError(
+      400,
+      `This session already has the game modes added: ${gameModesListString}`,
+    );
+  }
+
+  const newSessionGameModes = gameModeIds.map((gameModeId) => {
+    const id = uuidv4();
+    const newCardCardCategory: SessionGameMode = {
+      id,
+      sessionId,
+      gameModeId,
+      createdAt: Date.now(),
+    };
+    sessionGameModes.push(newCardCardCategory);
+    return newCardCardCategory;
+  });
+
+  writeSessionGameModesDB(sessionGameModes);
+
+  return newSessionGameModes;
 };
 
 export const assignCardToPlayerInSession = async (
