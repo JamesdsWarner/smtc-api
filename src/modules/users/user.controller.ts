@@ -1,17 +1,22 @@
-import { type Request, type Response, Router } from "express";
+import {
+  type NextFunction,
+  type Request,
+  type Response,
+  Router,
+} from "express";
 import * as UserService from "./user.service.ts";
 import { AppError } from "../../shared/errors/AppError.ts";
 
 const router = Router();
 
-const createUser = async (req: Request, res: Response) => {
-  const { name, plainPin } = req.body;
+const createUser = async (req: Request, res: Response, next: NextFunction) => {
+  const { name, userType } = req.body;
 
-  if (!name || !plainPin) {
+  if (!name || !userType) {
     throw new AppError(400, "Missing fields");
   }
 
-  const user = await UserService.createUser(name, plainPin);
+  const user = await UserService.createUser(name, userType);
   res.json(user);
 };
 

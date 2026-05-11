@@ -34,16 +34,16 @@ export const createCard = async (
   gameModeId: string,
   iconId: string,
 ) => {
+  const gameMode = await getGameMode(gameModeId);
+  if (!gameMode) throw new AppError(400, "Game Mode does not exist");
+
+  const icons = await readDB<Icon[]>(ICONS_PATH);
+
+  if (!icons.find((u) => u.id === iconId)) {
+    throw new AppError(400, "Icon does not exist");
+  }
+
   try {
-    const gameMode = await getGameMode(gameModeId);
-    if (!gameMode) throw new AppError(400, "Game Mode does not exist");
-
-    const icons = await readDB<Icon[]>(ICONS_PATH);
-
-    if (!icons.find((u) => u.id === iconId)) {
-      throw new AppError(400, "Icon does not exist");
-    }
-
     const res = await pool.query(
       `INSERT INTO cards (prompt, icon_id, game_mode_id) VALUES ($1, $2, $3) RETURNING *`,
       [prompt, iconId, gameModeId],
@@ -51,9 +51,7 @@ export const createCard = async (
 
     return res.rows[0];
   } catch (err) {
-    if (err instanceof AppError) throw err;
-
-    handleDbError(err, "Card prompt");
+    handleDbError(err, "Card");
   }
 };
 

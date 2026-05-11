@@ -1,11 +1,11 @@
 export class User {
   public name: string;
   public id: string;
-  public pinHash: string;
+  public userType: "temporary" | "permanent";
 
-  constructor(name: string, id: string, pinHash: string) {
+  constructor(name: string, id: string, userType: "temporary" | "permanent") {
     this.name = name;
     this.id = id;
-    this.pinHash = pinHash;
+    this.userType = userType;
   }
 }
