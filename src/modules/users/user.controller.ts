@@ -22,17 +22,12 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
 
 const getUser = async (req: Request, res: Response) => {
   const { userId } = req.params;
-  const { plainPin } = req.body;
 
   if (typeof userId !== "string") {
     throw new AppError(400, "Invalid or missing ID");
   }
 
-  if (!plainPin || typeof plainPin !== "string") {
-    throw new AppError(400, "Pin is required");
-  }
-
-  const user = await UserService.getUser(userId, plainPin);
+  const user = await UserService.getUser(userId);
   res.json(user);
 };
 

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import {
-  type Session,
+  Session,
   type SessionGameMode,
   type SessionUser,
   type SessionUserCard,
@@ -12,6 +12,8 @@ import { getUser, readUsersDB } from "../users/user.service.ts";
 import { readDB, writeDB } from "../../shared/helpers/dbHelper.ts";
 import { readCardsDB } from "../cards/card.service.ts";
 import { readGameModesDB } from "../gameModes/gameMode.service.ts";
+import { handleDbError } from "../../shared/utils/dbErrorHandler.ts";
+import pool from "../../shared/db/index.ts";
 const SESSIONS_DB_PATH = path.resolve("sessions.json");
 const SESSION_USERS_DB_PATH = path.resolve("session_users.json");
 const SESSION_USER_CARDS_DB_OATH = path.resolve("session_user_cards.json");
@@ -45,39 +47,59 @@ export const writeSessionGameModesDB = async (
     sessionGameModes,
   );
 
-export const createSession = async (name: string, hostPlayer: string) => {
-  const id = uuidv4();
-
-  const sessions = await readSessionDB();
-
-  // @Todo add get all users endpoint
-  const users = await readUsersDB();
-
-  const user = users.find((u) => u.id === hostPlayer);
-
-  if (!user) throw new AppError(400, "Invalid or missing ID");
-
-  const newSession: Session = {
-    id,
-    name,
-    hostPlayer,
-  };
-
-  sessions.push(newSession);
-  await writeSessionDB(sessions);
-
-  return newSession;
+/**
+ * Generates a random 4-character string for the Room Code
+ */
+const generateRoomCode = (): string => {
+  return Math.random().toString(36).substring(2, 6).toUpperCase();
 };
 
-export const getSession = async (id: string) => {
-  const sessions = await readSessionDB();
+export const createSession = async (
+  name: string,
+  hostId: string,
+): Promise<Session> => {
+  const roomCode = generateRoomCode();
 
-  // Check if session exists
-  const foundSession = sessions.find((u) => u.id === id);
-  if (!foundSession) {
-    throw new AppError(400, "Session not found");
+  try {
+    const query = `
+      INSERT INTO sessions (name, room_code, host_id, status)
+      VALUES ($1, $2, $3, 'lobby')
+      RETURNING id, name, room_code, host_id, status, created_at;
+    `;
+
+    const res = await pool.query(query, [name, roomCode, hostId]);
+
+    return res.rows[0];
+  } catch (err: any) {
+    // If the room_code somehow collides (Unique Violation), try once more
+    if (err.code === "23505" && err.constraint === "unique_room_code") {
+      return createSession(name, hostId);
+    }
+
+    return handleDbError(err, "Session");
   }
-  return foundSession;
+};
+
+export const getSession = async (identifier: string): Promise<Session> => {
+  try {
+    const query = `
+      SELECT id, name, room_code, host_id, status, created_at 
+      FROM sessions 
+      WHERE id::text = $1 OR room_code = $1;
+    `;
+
+    const res = await pool.query(query, [identifier]);
+
+    if (res.rows.length === 0) {
+      throw new AppError(404, "Session not found");
+    }
+
+    return res.rows[0];
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+
+    return handleDbError(err, "Session");
+  }
 };
 
 export const addUserToSession = async (
@@ -85,46 +107,19 @@ export const addUserToSession = async (
   userId: string,
   isHost = false,
 ) => {
-  const users = await readUsersDB();
-  const sessions = await readSessionDB();
-  const SessionUsers = await readSessionUsersDB();
+  try {
+    const query = `
+      INSERT INTO session_players (session_id, user_id, is_host)
+      VALUES ($1, $2, $3)
+      RETURNING id, session_id, user_id, is_host, score, joined_at;
+    `;
 
-  logger.info(sessionId, userId);
+    const res = await pool.query(query, [sessionId, userId, isHost]);
 
-  // Check if session exists
-  // getSession(sessionId);
-  const user = users.find((u) => u.id === userId);
-  if (!user) {
-    throw new AppError(400, "User not found");
+    return res.rows[0];
+  } catch (err: any) {
+    return handleDbError(err, "Session Join");
   }
-
-  const session = sessions.find((s) => s.id === sessionId);
-  if (!session) {
-    throw new AppError(400, "Session not found");
-  }
-
-  const SessionUserDuplicate = SessionUsers.find(
-    (sp) => sp.sessionId === sessionId && sp.userId === userId,
-  );
-
-  if (SessionUserDuplicate)
-    throw new AppError(400, `This user is already part of this session}`);
-
-  const id = uuidv4();
-
-  const newSessionUser: SessionUser = {
-    id,
-    sessionId,
-    userId,
-    joinedAt: Date.now(),
-    score: 0, // You can store game-specific user data here!
-    isHost,
-  };
-
-  SessionUsers.push(newSessionUser);
-  await writeSessionUserDB(SessionUsers);
-
-  return newSessionUser;
 };
 
 export const addGameModesToSession = async (

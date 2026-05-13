@@ -6,46 +6,26 @@ import { logger } from "../../shared/utils/logger.ts";
 const router = Router();
 
 const createSession = async (req: Request, res: Response) => {
-  const { name, hostPlayer } = req.body;
+  const { name, hostId } = req.body;
 
-  if (!name) {
-    throw new AppError(400, "Missing name field");
+  if (!name || !hostId) {
+    throw new AppError(400, "Missing required fields: name and hostId");
   }
 
-  if (!hostPlayer) {
-    throw new AppError(400, "Missing hostplayer field");
-  }
-
-  const session = await SessionService.createSession(name, hostPlayer);
-  const sessionId = session.id;
-
-  if (!sessionId) {
-    throw new AppError(400, "Error creating session");
-  }
-
-  const user = await SessionService.addUserToSession(
-    sessionId,
-    hostPlayer,
-    true,
-  );
-
-  const userId = user.id;
-
-  if (!userId) {
-    throw new AppError(400, "Error adding user to session");
-  }
+  const session = await SessionService.createSession(name, hostId);
+  await SessionService.addUserToSession(session.id, hostId, true);
 
   res.status(201).json(session);
 };
 
 const getSession = async (req: Request, res: Response) => {
-  const { sessionId } = req.params;
+  const { identifier } = req.params;
 
-  if (typeof sessionId !== "string") {
+  if (typeof identifier !== "string") {
     throw new AppError(400, "Invalid or missing ID");
   }
 
-  const user = await SessionService.getSession(sessionId);
+  const user = await SessionService.getSession(identifier);
   res.status(200).json(user);
 };
 
@@ -115,7 +95,7 @@ export const createSessionUserCards = async (req: Request, res: Response) => {
 };
 
 router.post("/create", createSession);
-router.get("/:sessionId", getSession);
+router.get("/:identifier", getSession);
 router.post("/:sessionId/players/:userId", addUserToSession);
 router.post("/:sessionId/add-game-modes", addGameModesToSession);
 router.post("/:sessionId/add-cards", addCardsToSession);

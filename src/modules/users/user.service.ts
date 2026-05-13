@@ -31,18 +31,24 @@ export const createUser = async (
   }
 };
 
-export const getUser = async (id: string, plainPin?: string) => {
-  const users = await readUsersDB();
+export const getUser = async (id: string) => {
+  try {
+    const query = `
+      SELECT id, name, user_type, created_at 
+      FROM users 
+      WHERE id = $1;
+    `;
 
-  // Check if user exists
-  const foundUser = users.find((u) => u.id === id);
-  if (!foundUser) {
-    throw new AppError(400, "User not found");
+    const res = await pool.query(query, [id]);
+
+    if (res.rows.length === 0) {
+      throw new AppError(404, "User not found");
+    }
+
+    return res.rows[0];
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+
+    handleDbError(err, "User");
   }
-
-  // const isValid = await bcrypt.compare(plainPin, foundUser.pinHash);
-
-  // if (!isValid) throw new AppError(401, "Incorrect pin");
-
-  return foundUser;
 };

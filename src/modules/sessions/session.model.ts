@@ -1,15 +1,29 @@
-export class Session {
-  public name: string;
-  public id: string;
-  public hostPlayer: string;
+export type SessionStatus = "lobby" | "in_progress" | "finished";
 
-  constructor(name: string, id: string, hostPlayer: string) {
-    this.name = name;
+export class Session {
+  public id: string; // UUID from Postgres
+  public name: string; // The display name for the room
+  public roomCode: string; // The 4-character join code (e.g., 'ABCD')
+  public hostId: string; // UUID of the player who created the room
+  public status: SessionStatus;
+  public createdAt: Date;
+
+  constructor(
+    id: string,
+    name: string,
+    roomCode: string,
+    hostId: string,
+    status: SessionStatus = "lobby",
+    createdAt: Date = new Date(),
+  ) {
     this.id = id;
-    this.hostPlayer = hostPlayer;
+    this.name = name;
+    this.roomCode = roomCode;
+    this.hostId = hostId;
+    this.status = status;
+    this.createdAt = createdAt;
   }
 }
-
 export interface SessionUser {
   id: string;
   sessionId: string;

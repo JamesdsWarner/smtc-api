@@ -39,3 +39,6 @@
 {"level":"info","message":"c0360945-5260-4b6a-8db2-d549d20a3f5e","timestamp":"2026-05-10T14:52:06.842Z"}
 {"code":"23514","constraint":"users_user_type_check","detail":"Failing row contains (068f2d97-e0f2-431e-b0f8-68a209c565c3, Jayboy, t, 2026-05-11 14:02:39.651338+01).","file":"execMain.c","length":283,"level":"info","line":"2079","name":"error","routine":"ExecConstraints","schema":"public","severity":"ERROR","table":"users","timestamp":"2026-05-11T13:02:39.653Z"}
 {"code":"23514","constraint":"users_user_type_check","detail":"Failing row contains (890f1c4e-0b05-48e5-b856-a8e230654db1, Jayboy, t, 2026-05-11 14:03:31.646841+01).","file":"execMain.c","length":283,"level":"info","line":"2079","name":"error","routine":"ExecConstraints","schema":"public","severity":"ERROR","table":"users","timestamp":"2026-05-11T13:03:31.648Z"}
+{"level":"info","message":"573209af-5802-412a-9df6-8626a0e0ac10","timestamp":"2026-05-13T20:28:12.461Z"}
+{"level":"info","message":"e20c5df5-1f68-4eaf-818e-f12730ebf1cd","timestamp":"2026-05-13T20:28:29.174Z"}
+{"level":"info","message":"60532735-d3f3-49da-acfc-c2480a1335f5","timestamp":"2026-05-13T20:31:39.701Z"}
