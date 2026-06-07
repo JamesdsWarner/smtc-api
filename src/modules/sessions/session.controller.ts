@@ -1,19 +1,26 @@
 import { type Request, type Response, Router } from "express";
 import * as SessionService from "./session.service.ts";
+import * as UserService from "../users/user.service.ts";
 import { AppError } from "../../shared/errors/AppError.ts";
 import { logger } from "../../shared/utils/logger.ts";
+import { Session } from "./session.model.ts";
 
 const router = Router();
 
 const createSession = async (req: Request, res: Response) => {
-  const { name, hostId } = req.body;
+  const { userName, pin } = req.body;
 
-  if (!name || !hostId) {
-    throw new AppError(400, "Missing required fields: name and hostId");
+  if (!pin) {
+    throw new AppError(400, "Missing required fields: pin");
   }
 
-  const session = await SessionService.createSession(name, hostId);
-  await SessionService.addUserToSession(session.id, hostId, true);
+  if (!userName) {
+    throw new AppError(400, "Missing required fields: userName");
+  }
+
+  const user = await UserService.createUser(userName);
+  const session = await SessionService.createSession(user.id);
+  await SessionService.addUserToSession(session.id, user.id, pin, true);
 
   res.status(201).json(session);
 };
@@ -29,19 +36,62 @@ const getSession = async (req: Request, res: Response) => {
   res.status(200).json(user);
 };
 
-const addUserToSession = async (req: Request, res: Response) => {
-  const { sessionId, userId } = req.params;
+const updateSessionStatus = async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  const { status, userId } = req.body;
 
   if (typeof sessionId !== "string") {
-    throw new AppError(400, "Invalid or missing ID");
+    throw new AppError(400, "Invalid or missing sessionId parameter");
   }
 
   if (typeof userId !== "string") {
-    throw new AppError(400, "Invalid or missing ID");
+    throw new AppError(
+      400,
+      "Missing or invalid user authorization header (x-user-id)",
+    );
   }
 
-  const user = await SessionService.addUserToSession(sessionId, userId);
-  res.status(200).json(user);
+  const validStatuses = ["in_progress", "completed"];
+  if (!validStatuses.includes(status)) {
+    throw new AppError(
+      400,
+      "Status must be either 'in_progress' or 'completed'",
+    );
+  }
+
+  const updatedSession = await SessionService.updateSessionStatus(
+    sessionId,
+    userId,
+    status,
+  );
+
+  res.status(200).json(updatedSession);
+};
+
+const addUserToSession = async (req: Request, res: Response) => {
+  const { userName, pin } = req.body;
+  const { roomCode } = req.params;
+
+  if (typeof userName !== "string") {
+    throw new AppError(400, "Invalid or missing userName");
+  }
+
+  if (typeof roomCode !== "string") {
+    throw new AppError(400, "Invalid or missing room code");
+  }
+
+  if (typeof pin !== "string") {
+    throw new AppError(400, "Invalid or missing PIN");
+  }
+
+  const session = await SessionService.getSessionByRoomCode(roomCode);
+  const user = await UserService.createUser(userName);
+  const sessionUser = await SessionService.addUserToSession(
+    session.id,
+    user.id,
+    pin,
+  );
+  res.status(200).json(sessionUser);
 };
 
 const addGameModesToSession = async (req: Request, res: Response) => {
@@ -86,7 +136,7 @@ export const createSessionUserCards = async (req: Request, res: Response) => {
     throw new AppError(400, "Invalid amount of cards");
   }
 
-  const sessionUserCards = await SessionService.assignCardToPlayerInSession(
+  const sessionUserCards = await SessionService.assignCardsToPlayer(
     userId,
     sessionId,
     amountOfCards,
@@ -96,7 +146,8 @@ export const createSessionUserCards = async (req: Request, res: Response) => {
 
 router.post("/create", createSession);
 router.get("/:identifier", getSession);
-router.post("/:sessionId/players/:userId", addUserToSession);
+router.post("/:sessionId/update-status", updateSessionStatus);
+router.post("/:roomCode/add-player", addUserToSession);
 router.post("/:sessionId/add-game-modes", addGameModesToSession);
 router.post("/:sessionId/add-cards", addCardsToSession);
 router.post("/:sessionId/players/:userId/cards", createSessionUserCards);

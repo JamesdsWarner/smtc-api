@@ -10,13 +10,13 @@ import { AppError } from "../../shared/errors/AppError.ts";
 const router = Router();
 
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
-  const { name, userType } = req.body;
+  const { name } = req.body;
 
-  if (!name || !userType) {
-    throw new AppError(400, "Missing fields");
+  if (!name) {
+    throw new AppError(400, "Missing name field");
   }
 
-  const user = await UserService.createUser(name, userType);
+  const user = await UserService.createUser(name);
   res.json(user);
 };
 

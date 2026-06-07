@@ -1,66 +1,58 @@
-import { v4 as uuidv4 } from "uuid";
-import { type GameMode, type GameModeCard } from "./gameMode.model.ts";
+import { type GameMode } from "./gameMode.model.ts";
 import path from "node:path";
 import { AppError } from "../../shared/errors/AppError.ts";
 // import { getCard } from "../cards/card.service.ts";
-import { readDB, writeDB } from "../../shared/helpers/dbHelper.ts";
+import { readDB } from "../../shared/helpers/dbHelper.ts";
 import type { Icon } from "../../types/icons.ts";
-const GAME_MODES_DB_PATH = path.resolve("game_modes.json");
-const GAME_MODE_CARDS_DB_PATH = path.resolve("game_mode_cards.json");
+import pool from "../../shared/db/index.ts";
+import { handleDbError } from "../../shared/utils/dbErrorHandler.ts";
 const ICONS_PATH = path.resolve("icons.json");
-
-export const readGameModesDB = async () =>
-  await readDB<GameMode[]>(GAME_MODES_DB_PATH);
-export const readGameModeCardsDB = async () =>
-  await readDB<GameModeCard[]>(GAME_MODE_CARDS_DB_PATH);
-export const writeGameModesDB = async (gameModes: GameMode[]) =>
-  await writeDB<GameMode[]>(GAME_MODES_DB_PATH, gameModes);
-export const writeGameModeCardsDB = async (gameModeCards: GameModeCard[]) =>
-  await writeDB<GameModeCard[]>(GAME_MODE_CARDS_DB_PATH, gameModeCards);
 
 export const createGameMode = async (
   name: string,
   description: string,
   iconId: string,
-) => {
-  const id = uuidv4();
-
-  const gameModes = await readGameModesDB();
-
-  // Check if card exists
-  if (gameModes.find((u) => u.name === name)) {
-    throw new AppError(400, "Game Mode already exists");
-  }
-
+): Promise<GameMode> => {
   const icons = await readDB<Icon[]>(ICONS_PATH);
 
   if (!icons.find((i) => i.id === iconId)) {
     throw new AppError(400, "Icon does not exist");
   }
 
-  const newGameMode: GameMode = {
-    id,
-    name,
-    description,
-    iconId,
-    createdAt: Date.now(),
-  };
+  try {
+    const query = `
+      INSERT INTO game_modes (name, description, icon_id) 
+      VALUES ($1, $2, $3) 
+      RETURNING id, name, description, icon_id, created_at;
+    `;
 
-  gameModes.push(newGameMode);
-  await writeGameModesDB(gameModes);
-
-  return newGameMode;
+    const res = await pool.query(query, [name, description, iconId]);
+    return res.rows[0];
+  } catch (err: any) {
+    return handleDbError(err, "GameMode");
+  }
 };
 
-export const getGameMode = async (id: string) => {
-  const gameModes = await readGameModesDB();
+export const getGameMode = async (id: string): Promise<GameMode> => {
+  try {
+    const query = `
+      SELECT id, name, description, icon_id, created_at 
+      FROM game_modes 
+      WHERE id::text = $1;
+    `;
 
-  // Check if gameMode exists
-  const foundGameMode = gameModes.find((u) => u.id === id);
-  if (!foundGameMode) {
-    throw new AppError(400, "gameMode not found");
+    const res = await pool.query(query, [id]);
+
+    if (res.rows.length === 0) {
+      throw new AppError(404, "Game mode not found");
+    }
+
+    return res.rows[0];
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+
+    return handleDbError(err, "GameMode");
   }
-  return foundGameMode;
 };
 
 // export const addCardToGameModes = async (

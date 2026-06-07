@@ -1,7 +1,4 @@
-import bcrypt from "bcrypt";
-import { v4 as uuidv4 } from "uuid";
 import { type User } from "./user.model.ts";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { AppError } from "../../shared/errors/AppError.ts";
 import { readDB, writeDB } from "../../shared/helpers/dbHelper.ts";
@@ -14,17 +11,14 @@ export const readUsersDB = async () => await readDB<User[]>(USER_DB_PATH);
 export const writeUsersDB = async (users: User[]) =>
   await writeDB<User[]>(USER_DB_PATH, users);
 
-export const createUser = async (
-  name: string,
-  userType: "temporary" | "permanent" = "temporary",
-) => {
+export const createUser = async (name: string) => {
   try {
     const query = `
-    INSERT INTO users (name, user_type) 
-    VALUES ($1, $2) 
-    RETURNING id, name, user_type;
+    INSERT INTO users (name) 
+    VALUES ($1) 
+    RETURNING id, name;
   `;
-    const res = await pool.query(query, [name, userType]);
+    const res = await pool.query(query, [name]);
     return res.rows[0];
   } catch (err) {
     handleDbError(err, "User");

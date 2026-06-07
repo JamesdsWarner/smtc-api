@@ -25,12 +25,6 @@ const createGameMode = async (req: Request, res: Response) => {
     description,
     iconId,
   );
-  const gameModeId = gameMode.id;
-
-  if (!gameModeId) {
-    throw new AppError(400, "Error creating gameMode");
-  }
-
   res.status(201).json(gameMode);
 };
 
