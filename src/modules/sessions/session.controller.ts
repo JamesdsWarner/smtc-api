@@ -144,12 +144,47 @@ export const createSessionUserCards = async (req: Request, res: Response) => {
   res.status(200).json(sessionUserCards);
 };
 
+const getSessionPlayers = async (req: Request, res: Response) => {
+  const { roomCode } = req.params;
+
+  if (typeof roomCode !== "string") {
+    throw new AppError(400, "Invalid or missing roomCode parameter");
+  }
+  const sanitizedRoomCode = roomCode.replace(/[- ]/g, "").toLowerCase();
+
+  const players = await SessionService.getPlayersByRoomCode(sanitizedRoomCode);
+
+  res.status(200).json(players);
+};
+
+const getSessionUserCards = async (req: Request, res: Response) => {
+  const { sessionId, userId } = req.params;
+
+  if (typeof sessionId !== "string") {
+    throw new AppError(400, "Invalid or missing sessionId parameter");
+  }
+
+  if (typeof userId !== "string") {
+    throw new AppError(400, "Invalid or missing userId parameter");
+  }
+
+  // Call the service layer to pull the cards
+  const cards = await SessionService.getSessionUserCards(sessionId, userId);
+
+  res.status(200).json(cards);
+};
+
+// ... Register it in your router stack near the bottom:
+router.get("/:sessionId/players/:userId/cards", getSessionUserCards);
+
 router.post("/create", createSession);
+router.get("/:roomCode/players", getSessionPlayers);
 router.get("/:identifier", getSession);
 router.post("/:sessionId/update-status", updateSessionStatus);
 router.post("/:roomCode/add-player", addUserToSession);
 router.post("/:sessionId/add-game-modes", addGameModesToSession);
 router.post("/:sessionId/add-cards", addCardsToSession);
 router.post("/:sessionId/players/:userId/cards", createSessionUserCards);
+router.get("/:sessionId/players/:userId/cards", getSessionUserCards);
 
 export default router;

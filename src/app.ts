@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 const app = express();
 const port = 3000;
+import cors from "cors"; // 1. Added CORS import
 import userRouter from "./modules/users/user.controller.ts";
 import sessionRouter from "./modules/sessions/session.controller.ts";
 import cardRouter from "./modules/cards/card.controller.ts";
@@ -9,9 +10,15 @@ import { errorHandler } from "./shared/middleware/errorHandler.ts";
 import winston from "winston";
 import expressWinston from "express-winston";
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
+// 2. Enable CORS with explicit allowances for your Vite client
+app.use(
+  cors({
+    origin: "http://localhost:5173", // Allows your React application
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "x-user-id"], // Allows the custom host-verification header
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
@@ -32,13 +39,17 @@ app.use(
   }),
 );
 
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
+
 app.use("/api/users", userRouter);
 app.use("/api/sessions", sessionRouter);
 app.use("/api/cards", cardRouter);
 app.use("/api/game-modes", gameModeRouter);
 
+app.use(errorHandler);
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
-
-app.use(errorHandler);

@@ -7,12 +7,25 @@ import { AppError } from "../../shared/errors/AppError.ts";
 import { handleDbError } from "../../shared/utils/dbErrorHandler.ts";
 import pool from "../../shared/db/index.ts";
 import bcrypt from "bcrypt";
+import {
+  uniqueNamesGenerator,
+  adjectives,
+  animals,
+  colors,
+} from "unique-names-generator";
 
 /**
- * Generates a random 4-character string for the Room Code
+ * Generates a random 2 word string separated by a hyphen for the Room Code
  */
 const generateRoomCode = (): string => {
-  return Math.random().toString(36).substring(2, 6).toUpperCase();
+  const generatedRoomCode = uniqueNamesGenerator({
+    dictionaries: [adjectives, colors, animals],
+    separator: "-",
+    length: 2,
+    style: "lowerCase",
+  });
+
+  return generatedRoomCode;
 };
 
 export const createSession = async (hostId: string): Promise<Session> => {
@@ -22,7 +35,12 @@ export const createSession = async (hostId: string): Promise<Session> => {
     const query = `
       INSERT INTO sessions (room_code, host_id, status)
       VALUES ($1, $2, 'lobby')
-      RETURNING id, room_code, host_id, status, created_at;
+      RETURNING 
+        id, 
+        room_code AS "roomCode", 
+        host_id AS "hostId", 
+        status, 
+        created_at AS "createdAt";
     `;
 
     const res = await pool.query(query, [roomCode, hostId]);
@@ -80,7 +98,23 @@ export const updateSessionStatus = async (
       throw new AppError(404, "Session not found");
     }
 
-    return res.rows[0];
+    const updatedSession = res.rows[0];
+
+    if (status === "in_progress") {
+      const getPlayersQuery = `
+        SELECT user_id FROM session_users WHERE session_id::text = $1;
+      `;
+      const playersRes = await pool.query(getPlayersQuery, [sessionId]);
+      const playerIds = playersRes.rows.map((row) => row.user_id);
+
+      const dealPromises = playerIds.map((playerId) =>
+        assignCardsToPlayer(playerId, sessionId, 5),
+      );
+
+      await Promise.all(dealPromises);
+    }
+
+    return updatedSession;
   } catch (err) {
     if (err instanceof AppError) throw err;
     return handleDbError(err, "Session Update");
@@ -90,7 +124,7 @@ export const updateSessionStatus = async (
 export const getSession = async (identifier: string): Promise<Session> => {
   try {
     const query = `
-      SELECT id, name, room_code, host_id, status, created_at 
+      SELECT id, room_code AS "roomCode", host_id AS "hostId", status, created_at as "createdAt"
       FROM sessions 
       WHERE id::text = $1 OR room_code = $1;
     `;
@@ -122,7 +156,7 @@ export const getSessionByRoomCode = async (roomCode: string) => {
       WHERE room_code = $1;
     `;
 
-    const res = await pool.query(query, [roomCode.toUpperCase()]);
+    const res = await pool.query(query, [roomCode.toLowerCase()]);
 
     if (res.rows.length === 0) {
       throw new AppError(404, `Session with room code '${roomCode}' not found`);
@@ -244,5 +278,58 @@ export const assignCardsToPlayer = async (
   } catch (err) {
     if (err instanceof AppError) throw err;
     return handleDbError(err, "SessionUserCard");
+  }
+};
+
+export const getPlayersByRoomCode = async (sanitizedRoomCode: string) => {
+  try {
+    const query = `
+      SELECT 
+        u.id, 
+        u.name
+      FROM users u
+      JOIN session_users su ON u.id = su.user_id
+      JOIN sessions s ON su.session_id = s.id
+      WHERE LOWER(REPLACE(s.room_code, '-', '')) = $1;
+    `;
+
+    const res = await pool.query(query, [sanitizedRoomCode]);
+
+    // Return the list of players (even if empty, an empty array is fine)
+    return res.rows;
+  } catch (err) {
+    return handleDbError(err, "Session Players Fetch");
+  }
+};
+
+export const getSessionUserCards = async (
+  sessionId: string,
+  userId: string,
+): Promise<SessionUserCard[]> => {
+  try {
+    const query = `
+      SELECT 
+        suc.id,
+        suc.session_id AS "sessionId",
+        suc.user_id AS "userId",
+        suc.card_id AS "cardId",
+        suc.status,
+        suc.created_at AS "createdAt",
+        c.prompt AS "cardPrompt",           
+        c.icon_id AS "iconId",              
+        c.game_mode_id AS "gameModeId",       
+        c.card_category_id AS "cardCategoryId" 
+      FROM session_user_cards suc
+      JOIN cards c ON suc.card_id = c.id
+      WHERE suc.session_id::text = $1 
+        AND suc.user_id::text = $2;
+    `;
+
+    const res = await pool.query(query, [sessionId, userId]);
+
+    // Returns an array of cards with the prompt data included
+    return res.rows;
+  } catch (err) {
+    return handleDbError(err, "SessionUserCards Fetch");
   }
 };
