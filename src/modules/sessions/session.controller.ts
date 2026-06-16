@@ -174,9 +174,55 @@ const getSessionUserCards = async (req: Request, res: Response) => {
   res.status(200).json(cards);
 };
 
-// ... Register it in your router stack near the bottom:
-router.get("/:sessionId/players/:userId/cards", getSessionUserCards);
+export const updateCardStatus = async (req: Request, res: Response) => {
+  const { sessionId, cardId } = req.params;
+  const { userId, status } = req.body;
 
+  if (!sessionId || !cardId) {
+    throw new AppError(400, "Missing required parameters: sessionId or cardId");
+  }
+  if (!userId) {
+    throw new AppError(400, "Missing required field: userId");
+  }
+
+  const validStatuses = ["active", "discarded", "success", "failed"];
+  if (!validStatuses.includes(status)) {
+    throw new AppError(
+      400,
+      "Status must be 'active', 'discarded', 'success', or 'failed'",
+    );
+  }
+
+  const updatedCardLink = await SessionService.updatePlayerCardStatus(
+    sessionId,
+    userId,
+    cardId,
+    status,
+  );
+
+  res.status(200).json(updatedCardLink);
+};
+
+export const getSessionUserController = async (req: Request, res: Response) => {
+  const { sessionId, userId } = req.params;
+
+  if (typeof sessionId !== "string") {
+    throw new AppError(400, "Invalid or missing sessionId parameter");
+  }
+
+  if (typeof userId !== "string") {
+    throw new AppError(400, "Invalid or missing userId parameter");
+  }
+
+  const sessionUser = await SessionService.getSessionUser(sessionId, userId);
+
+  res.status(200).json(sessionUser);
+};
+
+// ... Register it in your router stack near the bottom:
+router.get("/:sessionId/players/:userId", getSessionUserController);
+router.get("/:sessionId/players/:userId/cards", getSessionUserCards);
+router.patch("/:sessionId/cards/:cardId/status", updateCardStatus);
 router.post("/create", createSession);
 router.get("/:roomCode/players", getSessionPlayers);
 router.get("/:identifier", getSession);

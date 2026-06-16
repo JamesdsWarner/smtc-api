@@ -333,3 +333,97 @@ export const getSessionUserCards = async (
     return handleDbError(err, "SessionUserCards Fetch");
   }
 };
+
+export const updatePlayerCardStatus = async (
+  sessionId: string,
+  userId: string,
+  cardId: string,
+  status: "active" | "discarded" | "success" | "failed",
+) => {
+  // Get a client from the pool to handle our explicit transaction lifecycle
+  const client = await pool.connect();
+
+  try {
+    // 1. Begin the Transaction Block
+    await client.query("BEGIN");
+
+    // 2. Update the card status matching our targeting predicates
+    const cardUpdateQuery = `
+      UPDATE session_user_cards
+      SET status = $1
+      WHERE session_id::text = $2
+        AND user_id::text = $3
+        AND card_id::text = $4
+      RETURNING id, session_id AS "sessionId", user_id AS "userId", card_id AS "cardId", status, created_at AS "createdAt";
+    `;
+
+    const cardRes = await client.query(cardUpdateQuery, [
+      status,
+      sessionId,
+      userId,
+      cardId,
+    ]);
+
+    if (cardRes.rows.length === 0) {
+      throw new AppError(
+        404,
+        "Card assignment not found for this user in this session.",
+      );
+    }
+
+    // 3. Conditional Score Increment Gate
+    // If the card is successful, increment the score column inside session_users
+    if (status === "success") {
+      const scoreUpdateQuery = `
+        UPDATE session_users
+        SET score = score + 1
+        WHERE session_id::text = $1 
+          AND user_id::text = $2;
+      `;
+
+      await client.query(scoreUpdateQuery, [sessionId, userId]);
+    }
+
+    // 4. Commit all operations permanently to the database
+    await client.query("COMMIT");
+
+    // Return the updated card link metadata structure back to the controller stack
+    return cardRes.rows[0];
+  } catch (err) {
+    // If anything fails anywhere inside the try block, revert all steps completely
+    await client.query("ROLLBACK");
+
+    if (err instanceof AppError) throw err;
+    return handleDbError(err, "Player Card Update");
+  } finally {
+    // CRITICAL: Always release the client back to the database pool!
+    client.release();
+  }
+};
+
+export const getSessionUser = async (sessionId: string, userId: string) => {
+  try {
+    const query = `
+      SELECT 
+        id, 
+        session_id AS "sessionId", 
+        user_id AS "userId", 
+        is_host AS "isHost", 
+        score, 
+        joined_at AS "joinedAt"
+      FROM session_users
+      WHERE session_id::text = $1 AND user_id::text = $2;
+    `;
+
+    const res = await pool.query(query, [sessionId, userId]);
+
+    if (res.rows.length === 0) {
+      throw new AppError(404, "Player registration not found in this session.");
+    }
+
+    return res.rows[0];
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    return handleDbError(err, "Session User Fetch");
+  }
+};
